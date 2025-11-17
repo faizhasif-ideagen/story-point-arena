@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Point Knights Team Battle</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Story Estimation Screen -->
+        <div id="estimationScreen" class="screen active">
+            <h1>📝 Story Point Estimator</h1>
+            <div class="estimation-container">
+                <div class="estimation-input-section">
+                    <h2>Describe Your Task</h2>
+                    <p class="helper-text">Paste or type your user story, task description, or feature requirements below. Our AI will analyze the complexity and recommend story points!</p>
+                    <textarea id="taskDescription" placeholder="Example: As a user, I want to be able to reset my password so that I can regain access to my account if I forget it. This includes email verification, secure token generation, and password validation..."></textarea>
+                    <button id="analyzeBtn" class="analyze-btn">🤖 Analyze with AI</button>
+                </div>
+                <div class="estimation-results">
+                    <h2>AI Recommendations</h2>
+                    <div id="analysisResults" class="analysis-results">
+                        <div class="waiting-message">
+                            <span class="ai-icon">🤖</span>
+                            <p>Enter a task description and click "Analyze with AI" to get story point recommendations!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button id="proceedToSetupBtn" class="start-btn">Continue to Team Setup →</button>
+        </div>
+
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="screen">
+            <h1>Story Point Knights Team Battle</h1>
+            <div class="setup-container">
+                <div class="player-input-section">
+                    <h2>Add Players (Max 20)</h2>
+                    <div class="input-group">
+                        <input type="text" id="playerName" placeholder="Enter player name" maxlength="20">
+                        <select id="fibonacciNumber">
+                            <option value="">Select Story Points</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                            <option value="8">8</option>
+                            <option value="13">13</option>
+                            <option value="21">21</option>
+                            <option value="34">34</option>
+                            <option value="55">55</option>
+                            <option value="89">89</option>
+                        </select>
+                        <button id="addPlayerBtn">Add Player</button>
+                    </div>
+                    <div id="playersList" class="players-list"></div>
+                </div>
+                <div class="instructions">
+                    <h3>How to Play</h3>
+                    <ul>
+                        <li>Add 2-20 players with story point values</li>
+                        <li>Players with same story points = SAME TEAM</li>
+                        <li>Teams split: Left vs Right side</li>
+                        <li>ALL players shown on screen at once!</li>
+                        <li>You control first knight (Arrow Keys + SPACE)</li>
+                        <li>AI controls the rest automatically</li>
+                        <li>Same team CANNOT attack each other</li>
+                        <li>Last team standing wins!</li>
+                    </ul>
+                    <div id="startError" class="start-error"></div>
+                    <button id="startTournamentBtn" class="start-btn" disabled>Start Battle</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Screen -->
+        <div id="battleScreen" class="screen">
+            <div class="battle-hud">
+                <div id="currentMatch" class="current-match"></div>
+                <div id="battleTimer" class="battle-timer">Time: 0s</div>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+            <div id="battleLog" class="battle-log"></div>
+            <div class="controls-hint">
+                <span>Move: ↑↓←→</span>
+                <span>Attack: SPACE</span>
+            </div>
+        </div>
+
+        <!-- Winner Screen -->
+        <div id="winnerScreen" class="screen">
+            <h1>🏆 Victory! 🏆</h1>
+            <div id="winnerDisplay" class="winner-display"></div>
+            <button id="newTournamentBtn" class="start-btn">← Back to Story Estimator</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
