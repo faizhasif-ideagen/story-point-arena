@@ -90,7 +90,10 @@
                     </div>
 
                     <div class="network-actions">
-                        <button id="networkStartBattleBtn" class="start-btn" disabled>Start Battle →</button>
+                        <div class="game-mode-buttons" style="margin-bottom: 20px;">
+                            <button id="networkStartBattleBtn" class="game-mode-btn battle-arena-btn" disabled>🗡️ Battle Arena</button>
+                            <button id="networkStartRaceBtn" class="game-mode-btn horse-race-btn" disabled>🐴 Horse Race</button>
+                        </div>
                         <button id="leaveRoomBtn" class="back-btn">← Leave Room</button>
                     </div>
                 </div>
@@ -168,7 +171,10 @@
                         <li>Last team standing wins!</li>
                     </ul>
                     <div id="startError" class="start-error"></div>
-                    <button id="startTournamentBtn" class="start-btn" disabled>Start Battle</button>
+                    <div class="game-mode-buttons">
+                        <button id="startBattleArenaBtn" class="game-mode-btn battle-arena-btn" disabled>🗡️ Battle Arena</button>
+                        <button id="startHorseRaceBtn" class="game-mode-btn horse-race-btn" disabled>🐴 Horse Race</button>
+                    </div>
                     <button id="finishRoundBtn" class="finish-btn">Finish Round & View Rankings →</button>
                 </div>
             </div>
@@ -209,6 +215,17 @@
                     <button id="resetStatsBtn" class="reset-btn">Reset Statistics Only</button>
                     <button id="clearAllDataBtn" class="reset-btn" style="background: rgba(139, 0, 0, 0.3); border-color: #8B0000;">Clear All Data & Players</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Horse Race Screen -->
+        <div id="horseRaceScreen" class="screen">
+            <div class="race-hud">
+                <div id="raceTimer" class="race-timer">Time: 0s</div>
+            </div>
+            <canvas id="raceCanvas"></canvas>
+            <div class="race-controls-hint">
+                <span>Press SPACE rapidly to make your team's horse run faster!</span>
             </div>
         </div>
 

@@ -234,6 +234,72 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('return-to-lobby');
     });
 
+    // Horse Race events
+    socket.on('start-race', (raceData) => {
+        const roomCode = socket.currentRoom;
+        if (!roomCode) return;
+
+        const room = rooms.get(roomCode);
+        if (!room) return;
+
+        // Only host can start race
+        if (socket.id !== room.host) {
+            socket.emit('error', 'Only the host can start the race');
+            return;
+        }
+
+        room.gameState = 'race';
+
+        console.log(`Race started in room ${roomCode}`);
+
+        // Notify all clients to start race with hurdles
+        io.to(roomCode).emit('race-started', {
+            players: room.players,
+            leftHurdles: raceData.leftHurdles,
+            rightHurdles: raceData.rightHurdles
+        });
+    });
+
+    // Race click (space bar tap)
+    socket.on('race-click', (clickData) => {
+        const roomCode = socket.currentRoom;
+        if (!roomCode) return;
+
+        // Broadcast click to all clients
+        io.to(roomCode).emit('race-click', {
+            socketId: socket.id,
+            team: clickData.team
+        });
+    });
+
+    // Race jump (C button tap for hurdles)
+    socket.on('race-jump', (jumpData) => {
+        const roomCode = socket.currentRoom;
+        if (!roomCode) return;
+
+        // Broadcast jump to all clients
+        io.to(roomCode).emit('race-jump', {
+            socketId: socket.id,
+            team: jumpData.team
+        });
+    });
+
+    // Race ended
+    socket.on('race-ended', (winnerData) => {
+        const roomCode = socket.currentRoom;
+        if (!roomCode) return;
+
+        const room = rooms.get(roomCode);
+        if (!room) return;
+
+        room.gameState = 'finished';
+
+        console.log(`Race ended in room ${roomCode}`);
+
+        // Notify all clients
+        io.to(roomCode).emit('race-ended', winnerData);
+    });
+
     // Leave room
     socket.on('leave-room', () => {
         const roomCode = socket.currentRoom;

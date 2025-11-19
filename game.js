@@ -7,6 +7,7 @@ const GameState = {
     ESTIMATION: 'estimation',
     SETUP: 'setup',
     BATTLE: 'battle',
+    HORSE_RACE: 'horse_race',
     WINNER: 'winner',
     RANKINGS: 'rankings'
 };
@@ -71,7 +72,8 @@ class Game {
         document.getElementById('playerName').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addPlayer();
         });
-        document.getElementById('startTournamentBtn').addEventListener('click', () => this.startBattle());
+        document.getElementById('startBattleArenaBtn').addEventListener('click', () => this.startBattle());
+        document.getElementById('startHorseRaceBtn').addEventListener('click', () => this.startHorseRace());
         document.getElementById('finishRoundBtn').addEventListener('click', () => this.showRankings());
 
         // Winner screen
@@ -101,10 +103,133 @@ class Game {
             if (e.key === ' ' && this.state === GameState.BATTLE) {
                 e.preventDefault();
             }
+            // Horse race space bar clicking (prevent holding - only count distinct taps)
+            if (e.key === ' ' && this.state === GameState.HORSE_RACE && !this.raceFinished && !this.spaceKeyWasPressed) {
+                e.preventDefault();
+                this.spaceKeyWasPressed = true; // Mark space as pressed to prevent repeated firing
+
+                // Only register space if race has started
+                if (!this.raceData.raceStarted) {
+                    return; // Race hasn't started yet
+                }
+
+                // Determine which team gets the click based on player
+                // Each click = 1% progress (but only if not at a hurdle)
+                if (this.isNetworkMode) {
+                    // In network mode, find current player's team
+                    const myPlayer = this.players.find(p => p.socketId === networkManager.getMySocketId());
+                    if (myPlayer) {
+                        const isLeftTeam = this.teams.left.some(p => p.id === myPlayer.id);
+                        if (isLeftTeam) {
+                            // Only move if not at a hurdle
+                            if (this.raceData.leftCurrentHurdle === null) {
+                                this.raceData.leftTeamProgress += 1; // 1% per click
+                                // Send to server
+                                networkManager.sendRaceClick('left');
+                            }
+                        } else {
+                            // Only move if not at a hurdle
+                            if (this.raceData.rightCurrentHurdle === null) {
+                                this.raceData.rightTeamProgress += 1; // 1% per click
+                                // Send to server
+                                networkManager.sendRaceClick('right');
+                            }
+                        }
+                    }
+                } else {
+                    // In local mode, control first player's team (index 0)
+                    const firstPlayer = this.players[0];
+                    const isLeftTeam = this.teams.left.some(p => p.id === firstPlayer.id);
+                    if (isLeftTeam) {
+                        // Only move if not at a hurdle
+                        if (this.raceData.leftCurrentHurdle === null) {
+                            this.raceData.leftTeamProgress += 1; // 1% per click
+                        }
+                    } else {
+                        // Only move if not at a hurdle
+                        if (this.raceData.rightCurrentHurdle === null) {
+                            this.raceData.rightTeamProgress += 1; // 1% per click
+                        }
+                    }
+                }
+            }
+
+            // Horse race C button for jumping hurdles
+            if ((e.key === 'c' || e.key === 'C') && this.state === GameState.HORSE_RACE && !this.raceFinished && !this.cKeyWasPressed) {
+                e.preventDefault();
+                this.cKeyWasPressed = true;
+
+                // Only register if race has started
+                if (!this.raceData.raceStarted) {
+                    return;
+                }
+
+                // Handle jumping hurdles
+                if (this.isNetworkMode) {
+                    const myPlayer = this.players.find(p => p.socketId === networkManager.getMySocketId());
+                    if (myPlayer) {
+                        const isLeftTeam = this.teams.left.some(p => p.id === myPlayer.id);
+                        if (isLeftTeam && this.raceData.leftCurrentHurdle !== null) {
+                            this.raceData.leftJumpPresses++;
+                            // Send to server
+                            networkManager.sendRaceJump('left');
+
+                            // Check if jumped over hurdle (10 presses)
+                            if (this.raceData.leftJumpPresses >= 10) {
+                                this.raceData.leftClearedHurdles.push(this.raceData.leftCurrentHurdle); // Mark as cleared
+                                this.raceData.leftCurrentHurdle = null; // Clear hurdle
+                                this.raceData.leftJumpPresses = 0;
+                            }
+                        } else if (!isLeftTeam && this.raceData.rightCurrentHurdle !== null) {
+                            this.raceData.rightJumpPresses++;
+                            // Send to server
+                            networkManager.sendRaceJump('right');
+
+                            // Check if jumped over hurdle (10 presses)
+                            if (this.raceData.rightJumpPresses >= 10) {
+                                this.raceData.rightClearedHurdles.push(this.raceData.rightCurrentHurdle); // Mark as cleared
+                                this.raceData.rightCurrentHurdle = null; // Clear hurdle
+                                this.raceData.rightJumpPresses = 0;
+                            }
+                        }
+                    }
+                } else {
+                    // In local mode
+                    const firstPlayer = this.players[0];
+                    const isLeftTeam = this.teams.left.some(p => p.id === firstPlayer.id);
+                    if (isLeftTeam && this.raceData.leftCurrentHurdle !== null) {
+                        this.raceData.leftJumpPresses++;
+
+                        // Check if jumped over hurdle (10 presses)
+                        if (this.raceData.leftJumpPresses >= 10) {
+                            this.raceData.leftClearedHurdles.push(this.raceData.leftCurrentHurdle); // Mark as cleared
+                            this.raceData.leftCurrentHurdle = null; // Clear hurdle
+                            this.raceData.leftJumpPresses = 0;
+                        }
+                    } else if (!isLeftTeam && this.raceData.rightCurrentHurdle !== null) {
+                        this.raceData.rightJumpPresses++;
+
+                        // Check if jumped over hurdle (10 presses)
+                        if (this.raceData.rightJumpPresses >= 10) {
+                            this.raceData.rightClearedHurdles.push(this.raceData.rightCurrentHurdle); // Mark as cleared
+                            this.raceData.rightCurrentHurdle = null; // Clear hurdle
+                            this.raceData.rightJumpPresses = 0;
+                        }
+                    }
+                }
+            }
         });
 
         window.addEventListener('keyup', (e) => {
             this.keys[e.key] = false;
+            // Reset space key state for horse race tap detection
+            if (e.key === ' ' && this.state === GameState.HORSE_RACE) {
+                this.spaceKeyWasPressed = false;
+            }
+            // Reset C key state for horse race jump detection
+            if ((e.key === 'c' || e.key === 'C') && this.state === GameState.HORSE_RACE) {
+                this.cKeyWasPressed = false;
+            }
         });
 
         // Mouse controls for shield direction
@@ -127,6 +252,7 @@ class Game {
         const leaveRoomBtn = document.getElementById('leaveRoomBtn');
         const addNetworkPlayerBtn = document.getElementById('addNetworkPlayerBtn');
         const networkStartBattleBtn = document.getElementById('networkStartBattleBtn');
+        const networkStartRaceBtn = document.getElementById('networkStartRaceBtn');
         const networkPlayerName = document.getElementById('networkPlayerName');
         const roomCodeInput = document.getElementById('roomCodeInput');
 
@@ -161,6 +287,10 @@ class Game {
 
         if (networkStartBattleBtn) {
             networkStartBattleBtn.addEventListener('click', () => this.startNetworkBattle());
+        }
+
+        if (networkStartRaceBtn) {
+            networkStartRaceBtn.addEventListener('click', () => this.startNetworkRace());
         }
 
         if (networkPlayerName) {
@@ -210,6 +340,22 @@ class Game {
 
         networkManager.on('battle-ended', (winnerData) => {
             this.onNetworkBattleEnded(winnerData);
+        });
+
+        networkManager.on('race-started', (players) => {
+            this.onNetworkRaceStarted(players);
+        });
+
+        networkManager.on('race-click', (clickData) => {
+            this.onNetworkRaceClick(clickData);
+        });
+
+        networkManager.on('race-jump', (jumpData) => {
+            this.onNetworkRaceJump(jumpData);
+        });
+
+        networkManager.on('race-ended', (winnerData) => {
+            this.onNetworkRaceEnded(winnerData);
         });
 
         networkManager.on('became-host', () => {
@@ -536,14 +682,17 @@ class Game {
 
     updateHostIndicator(isHost) {
         const hostIndicator = document.getElementById('hostIndicator');
-        const startButton = document.getElementById('networkStartBattleBtn');
+        const startBattleButton = document.getElementById('networkStartBattleBtn');
+        const startRaceButton = document.getElementById('networkStartRaceBtn');
 
         if (isHost) {
             hostIndicator.style.display = 'block';
-            startButton.style.display = 'block';
+            if (startBattleButton) startBattleButton.style.display = 'inline-block';
+            if (startRaceButton) startRaceButton.style.display = 'inline-block';
         } else {
             hostIndicator.style.display = 'none';
-            startButton.style.display = 'none';
+            if (startBattleButton) startBattleButton.style.display = 'none';
+            if (startRaceButton) startRaceButton.style.display = 'none';
         }
     }
 
@@ -596,10 +745,22 @@ class Game {
 
         this.updateNetworkPlayersList();
 
-        // Update start button state (only for host)
+        // Update start button states (only for host)
         if (networkManager.isHost) {
-            const startButton = document.getElementById('networkStartBattleBtn');
-            startButton.disabled = this.networkPlayers.length < 2;
+            const startBattleButton = document.getElementById('networkStartBattleBtn');
+            const startRaceButton = document.getElementById('networkStartRaceBtn');
+
+            // Check if we have enough players and different story points
+            const hasTwoPlayers = this.networkPlayers.length >= 2;
+            const uniqueStoryPoints = [...new Set(this.networkPlayers.map(p => p.storyPoints))];
+            const hasDifferentPoints = uniqueStoryPoints.length > 1;
+
+            if (startBattleButton) {
+                startBattleButton.disabled = !(hasTwoPlayers && hasDifferentPoints);
+            }
+            if (startRaceButton) {
+                startRaceButton.disabled = !(hasTwoPlayers && hasDifferentPoints);
+            }
         }
     }
 
@@ -645,6 +806,31 @@ class Game {
             const initialPositions = this.generateKnightPositions(this.networkPlayers.length);
             // Send positions along with battle start
             networkManager.socket.emit('start-battle-with-positions', { positions: initialPositions });
+        }
+    }
+
+    startNetworkRace() {
+        if (this.networkPlayers.length < 2) {
+            alert('Need at least 2 players to start race');
+            return;
+        }
+
+        // Check if all players have same story points
+        const uniqueStoryPoints = [...new Set(this.networkPlayers.map(p => p.storyPoints))];
+        if (uniqueStoryPoints.length === 1) {
+            alert('All players have the same story points! Need different values to create teams.');
+            return;
+        }
+
+        // Host initiates race start and generates hurdles
+        if (networkManager.isHost) {
+            // Generate hurdles for both lanes
+            const leftHurdles = this.generateHurdles();
+            const rightHurdles = this.generateHurdles();
+
+            // Send to server with hurdles
+            networkManager.startRace(leftHurdles, rightHurdles);
+            // When server broadcasts race-started, all clients (including host) will call startHorseRace
         }
     }
 
@@ -734,6 +920,81 @@ class Game {
         }
     }
 
+    onNetworkRaceStarted(raceData) {
+        // Sync race start - all clients start the race
+        console.log('Race started by host, starting race for all clients');
+
+        // Load players from network
+        this.players = raceData.players.map(p => {
+            const player = new Player(p.name, p.storyPoints);
+            player.id = p.id;
+            player.socketId = p.socketId;
+            player.stats = p.stats || { games: 0, wins: 0, kills: 0, damageDealt: 0 };
+            return player;
+        });
+
+        // Store the hurdles to use when starting the race
+        this.networkHurdles = {
+            left: raceData.leftHurdles,
+            right: raceData.rightHurdles
+        };
+
+        // Start horse race for all clients
+        this.startHorseRace();
+    }
+
+    onNetworkRaceClick(clickData) {
+        // Sync race click from other players
+        if (clickData.socketId === networkManager.getMySocketId()) {
+            // Ignore own clicks (already processed)
+            return;
+        }
+
+        // Add progress for the team that clicked
+        if (clickData.team === 'left') {
+            this.raceData.leftTeamProgress += 1; // 1% per click
+        } else if (clickData.team === 'right') {
+            this.raceData.rightTeamProgress += 1; // 1% per click
+        }
+    }
+
+    onNetworkRaceJump(jumpData) {
+        // Sync race jump from other players
+        if (jumpData.socketId === networkManager.getMySocketId()) {
+            // Ignore own jumps (already processed)
+            return;
+        }
+
+        // Add jump press for the team
+        if (jumpData.team === 'left' && this.raceData.leftCurrentHurdle !== null) {
+            this.raceData.leftJumpPresses++;
+
+            // Check if jumped over hurdle (10 presses)
+            if (this.raceData.leftJumpPresses >= 10) {
+                this.raceData.leftClearedHurdles.push(this.raceData.leftCurrentHurdle); // Mark as cleared
+                this.raceData.leftCurrentHurdle = null; // Clear hurdle
+                this.raceData.leftJumpPresses = 0;
+            }
+        } else if (jumpData.team === 'right' && this.raceData.rightCurrentHurdle !== null) {
+            this.raceData.rightJumpPresses++;
+
+            // Check if jumped over hurdle (10 presses)
+            if (this.raceData.rightJumpPresses >= 10) {
+                this.raceData.rightClearedHurdles.push(this.raceData.rightCurrentHurdle); // Mark as cleared
+                this.raceData.rightCurrentHurdle = null; // Clear hurdle
+                this.raceData.rightJumpPresses = 0;
+            }
+        }
+    }
+
+    onNetworkRaceEnded(winnerData) {
+        // Sync race end
+        if (!this.raceFinished) {
+            this.raceFinished = true;
+            this.endHorseRace(winnerData.winningTeam);
+        }
+    }
+
     addPlayer() {
         const nameInput = document.getElementById('playerName');
         const fibSelect = document.getElementById('fibonacciNumber');
@@ -802,12 +1063,14 @@ class Game {
     }
 
     updateStartButton() {
-        const startBtn = document.getElementById('startTournamentBtn');
+        const battleBtn = document.getElementById('startBattleArenaBtn');
+        const raceBtn = document.getElementById('startHorseRaceBtn');
         const errorDiv = document.getElementById('startError');
 
         // Check if we have enough players
         if (this.players.length < 2) {
-            startBtn.disabled = true;
+            battleBtn.disabled = true;
+            raceBtn.disabled = true;
             errorDiv.textContent = '';
             return;
         }
@@ -816,13 +1079,15 @@ class Game {
         const uniqueStoryPoints = [...new Set(this.players.map(p => p.storyPoints))];
 
         if (uniqueStoryPoints.length === 1) {
-            startBtn.disabled = true;
+            battleBtn.disabled = true;
+            raceBtn.disabled = true;
             errorDiv.textContent = '⚠️ All players have the same story points! Add players with different values to create teams.';
             return;
         }
 
         // All checks passed
-        startBtn.disabled = false;
+        battleBtn.disabled = false;
+        raceBtn.disabled = false;
         errorDiv.textContent = '';
     }
 
@@ -890,6 +1155,516 @@ class Game {
         this.setupAllKnights();
         this.battleStartTime = Date.now();
         this.startBattleLoop();
+    }
+
+    startHorseRace() {
+        if (this.players.length < 2) return;
+
+        // Create teams
+        this.createTeams();
+
+        // Initialize horse race
+        this.showScreen(GameState.HORSE_RACE);
+        this.initRaceCanvas();
+        this.raceStartTime = Date.now();
+        this.raceFinished = false;
+
+        // Load horse image
+        this.horseImage = new Image();
+        this.horseImage.src = 'https://cdn3.iconfinder.com/data/icons/farm-animals/128/horse-1024.png';
+
+        // Horse race state (percentage-based: 1 click = 1%)
+        this.raceData = {
+            leftTeamProgress: 0, // 0-100%
+            rightTeamProgress: 0, // 0-100%
+            finishProgress: 100, // 100% to finish
+
+            // Countdown system
+            countdown: 3, // 3, 2, 1, then GO
+            countdownStartTime: Date.now(),
+            raceStarted: false, // true after countdown finishes
+
+            // Hurdles (5 random positions per lane between 20-80%)
+            // In network mode, use synced hurdles from host; in local mode, generate random
+            leftHurdles: this.networkHurdles ? this.networkHurdles.left : this.generateHurdles(),
+            rightHurdles: this.networkHurdles ? this.networkHurdles.right : this.generateHurdles(),
+
+            // Current hurdle state for each team
+            leftCurrentHurdle: null, // index of hurdle being jumped
+            rightCurrentHurdle: null,
+            leftJumpPresses: 0, // C button presses for current hurdle
+            rightJumpPresses: 0,
+            leftClearedHurdles: [], // indices of hurdles already cleared
+            rightClearedHurdles: [],
+
+            // Gallop animation (changes every 2%)
+            leftLastGallopProgress: 0,
+            rightLastGallopProgress: 0,
+            leftGallopFrame: 0, // 0 or 1 for animation
+            rightGallopFrame: 0
+        };
+
+        // Track key states to prevent holding
+        this.spaceKeyWasPressed = false;
+        this.cKeyWasPressed = false;
+
+        // Clear network hurdles after use
+        this.networkHurdles = null;
+
+        this.startRaceLoop();
+    }
+
+    generateHurdles() {
+        // Generate 5 random hurdle positions between 20% and 80%
+        const hurdles = [];
+        const minGap = 12; // Minimum 12% gap between hurdles
+
+        for (let i = 0; i < 5; i++) {
+            let position;
+            let attempts = 0;
+            do {
+                position = 20 + Math.random() * 60; // Between 20% and 80%
+                attempts++;
+            } while (attempts < 50 && hurdles.some(h => Math.abs(h - position) < minGap));
+
+            hurdles.push(position);
+        }
+
+        return hurdles.sort((a, b) => a - b); // Sort by position
+    }
+
+    initRaceCanvas() {
+        this.raceCanvas = document.getElementById('raceCanvas');
+        this.raceCtx = this.raceCanvas.getContext('2d');
+        this.raceCanvas.width = 1400;
+        this.raceCanvas.height = 400;
+    }
+
+    startRaceLoop() {
+        const raceLoop = () => {
+            if (this.state !== GameState.HORSE_RACE) {
+                return;
+            }
+
+            this.updateRace();
+            this.renderRace();
+
+            if (!this.raceFinished) {
+                requestAnimationFrame(raceLoop);
+            }
+        };
+
+        raceLoop();
+    }
+
+    updateRace() {
+        // Handle countdown
+        if (!this.raceData.raceStarted) {
+            const countdownElapsed = (Date.now() - this.raceData.countdownStartTime) / 1000;
+            if (countdownElapsed >= 3) {
+                this.raceData.raceStarted = true;
+                this.raceStartTime = Date.now(); // Start race timer now
+            } else {
+                // Update countdown number
+                this.raceData.countdown = Math.ceil(3 - countdownElapsed);
+            }
+            return; // Don't update anything else during countdown
+        }
+
+        // Update timer (only after race started)
+        const elapsed = Math.floor((Date.now() - this.raceStartTime) / 1000);
+        document.getElementById('raceTimer').textContent = `Time: ${elapsed}s`;
+
+        // Check for hurdle collisions (if horse reaches a hurdle position)
+        this.checkHurdleCollisions();
+
+        // Update gallop animation every 2%
+        if (Math.floor(this.raceData.leftTeamProgress / 2) > Math.floor(this.raceData.leftLastGallopProgress / 2)) {
+            this.raceData.leftGallopFrame = 1 - this.raceData.leftGallopFrame; // Toggle 0/1
+            this.raceData.leftLastGallopProgress = this.raceData.leftTeamProgress;
+        }
+        if (Math.floor(this.raceData.rightTeamProgress / 2) > Math.floor(this.raceData.rightLastGallopProgress / 2)) {
+            this.raceData.rightGallopFrame = 1 - this.raceData.rightGallopFrame; // Toggle 0/1
+            this.raceData.rightLastGallopProgress = this.raceData.rightTeamProgress;
+        }
+
+        // Check for winner (100% = finished)
+        if (this.raceData.leftTeamProgress >= 100 && !this.raceFinished) {
+            this.raceFinished = true;
+            this.endHorseRace('left');
+        } else if (this.raceData.rightTeamProgress >= 100 && !this.raceFinished) {
+            this.raceFinished = true;
+            this.endHorseRace('right');
+        }
+    }
+
+    checkHurdleCollisions() {
+        // Check left team hurdles
+        if (this.raceData.leftCurrentHurdle === null) {
+            for (let i = 0; i < this.raceData.leftHurdles.length; i++) {
+                // Skip if already cleared
+                if (this.raceData.leftClearedHurdles.includes(i)) {
+                    continue;
+                }
+
+                const hurdlePos = this.raceData.leftHurdles[i];
+                if (this.raceData.leftTeamProgress >= hurdlePos - 1 && this.raceData.leftTeamProgress < hurdlePos + 3) {
+                    // Hit a hurdle!
+                    this.raceData.leftCurrentHurdle = i;
+                    this.raceData.leftJumpPresses = 0;
+                    break;
+                }
+            }
+        }
+
+        // Check right team hurdles
+        if (this.raceData.rightCurrentHurdle === null) {
+            for (let i = 0; i < this.raceData.rightHurdles.length; i++) {
+                // Skip if already cleared
+                if (this.raceData.rightClearedHurdles.includes(i)) {
+                    continue;
+                }
+
+                const hurdlePos = this.raceData.rightHurdles[i];
+                if (this.raceData.rightTeamProgress >= hurdlePos - 1 && this.raceData.rightTeamProgress < hurdlePos + 3) {
+                    // Hit a hurdle!
+                    this.raceData.rightCurrentHurdle = i;
+                    this.raceData.rightJumpPresses = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    renderRace() {
+        // Clear canvas
+        this.raceCtx.fillStyle = '#8B4513';
+        this.raceCtx.fillRect(0, 0, this.raceCanvas.width, this.raceCanvas.height);
+
+        // Calculate track width (with margins)
+        const startX = 50;
+        const endX = this.raceCanvas.width - 50;
+        const trackWidth = endX - startX;
+
+        // Draw finish line
+        this.raceCtx.strokeStyle = '#fff';
+        this.raceCtx.lineWidth = 5;
+        this.raceCtx.setLineDash([15, 15]);
+        this.raceCtx.beginPath();
+        this.raceCtx.moveTo(endX, 0);
+        this.raceCtx.lineTo(endX, this.raceCanvas.height);
+        this.raceCtx.stroke();
+        this.raceCtx.setLineDash([]);
+
+        // Draw lanes
+        const laneHeight = this.raceCanvas.height / 2;
+
+        // Lane divider
+        this.raceCtx.strokeStyle = '#FFD700';
+        this.raceCtx.lineWidth = 3;
+        this.raceCtx.beginPath();
+        this.raceCtx.moveTo(0, laneHeight);
+        this.raceCtx.lineTo(this.raceCanvas.width, laneHeight);
+        this.raceCtx.stroke();
+
+        // Draw team indicators with "Team SP X" format
+        // Get story point values for each team
+        const leftTeamPoints = this.teams.left[0].storyPoints;
+        const rightTeamPoints = this.teams.right[0].storyPoints;
+
+        this.raceCtx.fillStyle = '#fff';
+        this.raceCtx.font = 'bold 24px Arial';
+        this.raceCtx.textAlign = 'left';
+
+        // Top lane label (at top of lane)
+        this.raceCtx.fillText(`Team SP ${leftTeamPoints}`, 10, 30);
+
+        // Bottom lane label (at bottom of lane)
+        this.raceCtx.fillText(`Team SP ${rightTeamPoints}`, 10, this.raceCanvas.height - 10);
+
+        // Draw cheering people
+        this.drawCheeringPeople(120, 30, this.teams.left[0].color, 'left'); // Top left for top team
+        this.drawCheeringPeople(this.raceCanvas.width - 120, 30, this.teams.right[0].color, 'right'); // Top right for bottom team
+
+        // Draw countdown or race elements
+        if (!this.raceData.raceStarted) {
+            // Draw countdown stickman and number
+            this.drawCountdownStickman(startX - 30, this.raceCanvas.height / 2);
+        } else {
+            // Draw hurdles
+            this.drawHurdles(startX, trackWidth, laneHeight);
+        }
+
+        // Convert percentage to pixel position
+        const leftPosition = startX + (this.raceData.leftTeamProgress / 100) * trackWidth;
+        const rightPosition = startX + (this.raceData.rightTeamProgress / 100) * trackWidth;
+
+        // Draw horses (only if race started)
+        if (this.raceData.raceStarted) {
+            this.renderHorse(leftPosition, laneHeight / 2, this.teams.left[0].color, 'left', this.raceData.leftGallopFrame, this.raceData.leftCurrentHurdle !== null);
+            this.renderHorse(rightPosition, laneHeight + laneHeight / 2, this.teams.right[0].color, 'right', this.raceData.rightGallopFrame, this.raceData.rightCurrentHurdle !== null);
+
+            // Jump progress bar hidden (still works in background)
+            // if (this.raceData.leftCurrentHurdle !== null) {
+            //     this.drawJumpProgress(leftPosition, laneHeight / 2 - 100, this.raceData.leftJumpPresses);
+            // }
+            // if (this.raceData.rightCurrentHurdle !== null) {
+            //     this.drawJumpProgress(rightPosition, laneHeight + laneHeight / 2 - 100, this.raceData.rightJumpPresses);
+            // }
+        }
+    }
+
+    drawCountdownStickman(x, y) {
+        const ctx = this.raceCtx;
+
+        // Draw stickman with gun
+        ctx.strokeStyle = '#000';
+        ctx.fillStyle = '#000';
+        ctx.lineWidth = 4;
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(x, y - 40, 10, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Body
+        ctx.beginPath();
+        ctx.moveTo(x, y - 30);
+        ctx.lineTo(x, y + 10);
+        ctx.stroke();
+
+        // Arms - gun raised
+        ctx.beginPath();
+        ctx.moveTo(x, y - 20);
+        ctx.lineTo(x + 25, y - 35); // Arm with gun raised
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x, y - 20);
+        ctx.lineTo(x - 15, y - 10);
+        ctx.stroke();
+
+        // Gun
+        ctx.fillStyle = '#333';
+        ctx.fillRect(x + 25, y - 38, 12, 6);
+
+        // Legs
+        ctx.strokeStyle = '#000';
+        ctx.beginPath();
+        ctx.moveTo(x, y + 10);
+        ctx.lineTo(x - 10, y + 30);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x, y + 10);
+        ctx.lineTo(x + 10, y + 30);
+        ctx.stroke();
+
+        // Countdown number
+        ctx.font = 'bold 80px Arial';
+        ctx.fillStyle = '#FFD700';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+
+        if (this.raceData.countdown > 0) {
+            ctx.strokeText(this.raceData.countdown.toString(), x + 80, y);
+            ctx.fillText(this.raceData.countdown.toString(), x + 80, y);
+        } else {
+            // Draw "BANG!" when shooting
+            ctx.font = 'bold 50px Arial';
+            ctx.fillStyle = '#FF0000';
+            ctx.strokeText('BANG!', x + 50, y - 40);
+            ctx.fillText('BANG!', x + 50, y - 40);
+
+            // Muzzle flash
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+            ctx.beginPath();
+            ctx.arc(x + 37, y - 35, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawCheeringPeople(x, y, teamColor, side) {
+        const ctx = this.raceCtx;
+
+        // Draw 3 cheering people
+        for (let i = 0; i < 3; i++) {
+            const offsetX = i * 30;
+            const personX = side === 'left' ? x + offsetX : x - offsetX;
+            const personY = y;
+
+            // Animate arms up/down based on gallop frame
+            const armOffset = this.raceData.raceStarted && (side === 'left' ? this.raceData.leftGallopFrame : this.raceData.rightGallopFrame) ? -5 : 5;
+
+            // Head
+            ctx.fillStyle = teamColor;
+            ctx.beginPath();
+            ctx.arc(personX, personY, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Body
+            ctx.strokeStyle = teamColor;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(personX, personY + 8);
+            ctx.lineTo(personX, personY + 25);
+            ctx.stroke();
+
+            // Arms raised (cheering)
+            ctx.beginPath();
+            ctx.moveTo(personX, personY + 12);
+            ctx.lineTo(personX - 8, personY + armOffset);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(personX, personY + 12);
+            ctx.lineTo(personX + 8, personY + armOffset);
+            ctx.stroke();
+
+            // Legs
+            ctx.beginPath();
+            ctx.moveTo(personX, personY + 25);
+            ctx.lineTo(personX - 5, personY + 40);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(personX, personY + 25);
+            ctx.lineTo(personX + 5, personY + 40);
+            ctx.stroke();
+        }
+
+        // Draw "GO!" text above people
+        if (this.raceData.raceStarted) {
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = teamColor;
+            ctx.textAlign = 'center';
+            ctx.fillText('GO!', x + (side === 'left' ? 30 : -30), y - 20);
+        }
+    }
+
+    drawHurdles(startX, trackWidth, laneHeight) {
+        const ctx = this.raceCtx;
+        const hurdleWidth = 8;
+        const hurdleHeight = 60;
+
+        // Draw left team hurdles (top lane)
+        this.raceData.leftHurdles.forEach(hurdlePercent => {
+            const x = startX + (hurdlePercent / 100) * trackWidth;
+            const y = laneHeight / 2;
+
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(x - hurdleWidth / 2, y - hurdleHeight / 2, hurdleWidth, hurdleHeight);
+
+            // Horizontal bars
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(x - hurdleWidth / 2 - 5, y - hurdleHeight / 2 + 5, hurdleWidth + 10, 4);
+            ctx.fillRect(x - hurdleWidth / 2 - 5, y + hurdleHeight / 2 - 9, hurdleWidth + 10, 4);
+        });
+
+        // Draw right team hurdles (bottom lane)
+        this.raceData.rightHurdles.forEach(hurdlePercent => {
+            const x = startX + (hurdlePercent / 100) * trackWidth;
+            const y = laneHeight + laneHeight / 2;
+
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(x - hurdleWidth / 2, y - hurdleHeight / 2, hurdleWidth, hurdleHeight);
+
+            // Horizontal bars
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(x - hurdleWidth / 2 - 5, y - hurdleHeight / 2 + 5, hurdleWidth + 10, 4);
+            ctx.fillRect(x - hurdleWidth / 2 - 5, y + hurdleHeight / 2 - 9, hurdleWidth + 10, 4);
+        });
+    }
+
+    drawJumpProgress(x, y, presses) {
+        const ctx = this.raceCtx;
+
+        // Progress bar background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(x - 50, y, 100, 20);
+
+        // Progress bar fill
+        const progress = presses / 10;
+        ctx.fillStyle = progress < 1 ? '#FFD700' : '#00FF00';
+        ctx.fillRect(x - 50, y, 100 * progress, 20);
+
+        // Text
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Jump: ${presses}/10 (Press C)`, x, y + 15);
+    }
+
+    renderHorse(x, y, color, teamSide, gallopFrame, atHurdle) {
+        // Draw horse image with gallop animation (see-saw/rocking motion)
+        const horseSize = 80;
+        const ctx = this.raceCtx;
+
+        // Calculate rotation angle for see-saw effect (front and back parts moving)
+        const rotationAngle = gallopFrame === 1 ? 0.08 : -0.08; // ~4.6 degrees tilt
+
+        if (this.horseImage && this.horseImage.complete) {
+            // Save canvas state
+            ctx.save();
+
+            // Translate to horse center, rotate, then draw
+            ctx.translate(x, y);
+            ctx.rotate(rotationAngle);
+
+            // Draw horse centered at origin (so rotation pivots around center)
+            ctx.drawImage(this.horseImage, -horseSize / 2, -horseSize / 2, horseSize, horseSize);
+
+            // Restore canvas state
+            ctx.restore();
+        } else {
+            // Fallback to emoji if image not loaded yet
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotationAngle);
+            ctx.font = '60px Arial';
+            ctx.fillText('🐴', -30, 20);
+            ctx.restore();
+        }
+
+        // Show "Jump (c)" label when at hurdle
+        if (atHurdle) {
+            ctx.font = 'bold 18px Arial';
+            ctx.fillStyle = '#FFD700';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+
+            // Draw text with outline
+            ctx.strokeText('Jump (C)', x, y - 60);
+            ctx.fillText('Jump (C)', x, y - 60);
+        }
+    }
+
+    endHorseRace(winningTeam) {
+        const winnerPlayers = winningTeam === 'left' ? this.teams.left : this.teams.right;
+
+        // Update player stats
+        winnerPlayers.forEach(player => {
+            if (!player.stats) {
+                player.stats = { games: 0, wins: 0, kills: 0, damageDealt: 0 };
+            }
+            player.stats.games++;
+            player.stats.wins++;
+        });
+
+        // Send race ended event in network mode
+        if (this.isNetworkMode) {
+            networkManager.sendRaceEnded({ winningTeam });
+        }
+
+        // Store that we're in horse race mode for victory display
+        this.isHorseRaceVictory = true;
+
+        // Show winner - pass the winningTeam string ('left' or 'right')
+        setTimeout(() => {
+            this.showWinner(winningTeam);
+        }, 1000);
     }
 
     initCanvas() {
@@ -1451,26 +2226,48 @@ class Game {
         }
 
         const winningTeamPlayers = winner === 'left' ? this.teams.left : this.teams.right;
-        const survivors = this.battleKnights.filter(k => k.team === winner && k.isAlive());
 
         // Get unique story point values from winning team
         const storyPointValues = [...new Set(winningTeamPlayers.map(p => p.storyPoints))].sort((a, b) => a - b);
         const teamColor = winner === 'left' ? '#FF6B6B' : '#4ECDC4';
 
-        display.innerHTML = `
-            <div class="victory-crown">👑</div>
-            <div class="victory-numbers" style="color: ${teamColor}">
-                ${storyPointValues.map(sp => `<span class="victory-number">${sp}</span>`).join('')}
-            </div>
-            <h2 class="victory-text">STORY POINTS VICTORIOUS!</h2>
-            <div class="winner-stats">
-                <p class="survivor-count">Survivors: ${survivors.length} / ${winningTeamPlayers.length}</p>
-                <h3>Victory Team Roster:</h3>
-                <ul>
-                    ${winningTeamPlayers.map(p => `<li>${p.name} <span class="points-badge" style="background: ${teamColor}">${p.storyPoints}</span> - HP: ${p.maxHp}, Dmg: ${p.damage}, Range: ${p.attackRange}</li>`).join('')}
-                </ul>
-            </div>
-        `;
+        // Check if this is a horse race victory
+        if (this.isHorseRaceVictory) {
+            // Simple horse race victory display - no stats, just winner
+            display.innerHTML = `
+                <div class="victory-crown">👑</div>
+                <div class="victory-numbers" style="color: ${teamColor}">
+                    ${storyPointValues.map(sp => `<span class="victory-number">${sp}</span>`).join('')}
+                </div>
+                <h2 class="victory-text">WINS THE RACE!</h2>
+                <div class="winner-stats">
+                    <h3>🏆 Winning Team Players:</h3>
+                    <ul>
+                        ${winningTeamPlayers.map(p => `<li>${p.name} <span class="points-badge" style="background: ${teamColor}">${p.storyPoints}</span></li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            // Reset flag
+            this.isHorseRaceVictory = false;
+        } else {
+            // Battle arena victory display with full stats
+            const survivors = this.battleKnights.filter(k => k.team === winner && k.isAlive());
+
+            display.innerHTML = `
+                <div class="victory-crown">👑</div>
+                <div class="victory-numbers" style="color: ${teamColor}">
+                    ${storyPointValues.map(sp => `<span class="victory-number">${sp}</span>`).join('')}
+                </div>
+                <h2 class="victory-text">STORY POINTS VICTORIOUS!</h2>
+                <div class="winner-stats">
+                    <p class="survivor-count">Survivors: ${survivors.length} / ${winningTeamPlayers.length}</p>
+                    <h3>Victory Team Roster:</h3>
+                    <ul>
+                        ${winningTeamPlayers.map(p => `<li>${p.name} <span class="points-badge" style="background: ${teamColor}">${p.storyPoints}</span> - HP: ${p.maxHp}, Dmg: ${p.damage}, Range: ${p.attackRange}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
     }
 
     log(message) {
@@ -1715,6 +2512,7 @@ class Game {
             [GameState.ESTIMATION]: 'estimationScreen',
             [GameState.SETUP]: 'setupScreen',
             [GameState.BATTLE]: 'battleScreen',
+            [GameState.HORSE_RACE]: 'horseRaceScreen',
             [GameState.WINNER]: 'winnerScreen',
             [GameState.RANKINGS]: 'rankingsScreen'
         };

@@ -100,6 +100,24 @@ class NetworkManager {
             this.trigger('return-to-lobby');
         });
 
+        // Horse race events
+        this.socket.on('race-started', (players) => {
+            console.log('Race started with players:', players);
+            this.trigger('race-started', players);
+        });
+
+        this.socket.on('race-click', (clickData) => {
+            this.trigger('race-click', clickData);
+        });
+
+        this.socket.on('race-jump', (jumpData) => {
+            this.trigger('race-jump', jumpData);
+        });
+
+        this.socket.on('race-ended', (winnerData) => {
+            this.trigger('race-ended', winnerData);
+        });
+
         // Error events
         this.socket.on('error', (message) => {
             console.error('Server error:', message);
@@ -228,6 +246,36 @@ class NetworkManager {
     nextBattle() {
         if (!this.roomCode) return;
         this.socket.emit('next-battle');
+    }
+
+    // Horse race management
+    startRace(leftHurdles, rightHurdles) {
+        if (!this.roomCode) {
+            console.error('Not in a room');
+            return;
+        }
+
+        if (!this.isHost) {
+            alert('Only the host can start the race');
+            return;
+        }
+
+        this.socket.emit('start-race', { leftHurdles, rightHurdles });
+    }
+
+    sendRaceClick(team) {
+        if (!this.roomCode) return;
+        this.socket.emit('race-click', { team });
+    }
+
+    sendRaceJump(team) {
+        if (!this.roomCode) return;
+        this.socket.emit('race-jump', { team });
+    }
+
+    sendRaceEnded(winnerData) {
+        if (!this.roomCode) return;
+        this.socket.emit('race-ended', winnerData);
     }
 
     // Event system for game.js to listen to network events
