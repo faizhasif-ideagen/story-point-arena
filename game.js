@@ -25,6 +25,7 @@ class Game {
         this.animationId = null;
         this.battleStartTime = 0;
         this.keys = {};
+        this.mouse = { x: 0, y: 0, canvasX: 0, canvasY: 0 }; // Track mouse position
         this.teams = { left: [], right: [] };
         this.currentBattleStats = {};
         this.battleEnded = false;
@@ -104,6 +105,19 @@ class Game {
 
         window.addEventListener('keyup', (e) => {
             this.keys[e.key] = false;
+        });
+
+        // Mouse controls for shield direction
+        window.addEventListener('mousemove', (e) => {
+            this.mouse.x = e.clientX;
+            this.mouse.y = e.clientY;
+
+            // Convert to canvas coordinates if canvas exists
+            if (this.canvas && this.state === GameState.BATTLE) {
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouse.canvasX = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+                this.mouse.canvasY = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+            }
         });
 
         console.log('  → Setting up network lobby listeners...');
@@ -677,6 +691,9 @@ class Game {
             knight.y = moveData.y;
             knight.rotation = moveData.rotation;
             knight.isBlocking = moveData.isBlocking || false;
+            if (moveData.shieldDirection !== undefined) {
+                knight.shieldDirection = moveData.shieldDirection;
+            }
         }
     }
 
@@ -1002,17 +1019,19 @@ class Game {
                     const oldY = knight.y;
                     const oldRotation = knight.rotation;
                     const oldBlocking = knight.isBlocking;
+                    const oldShieldDirection = knight.shieldDirection;
 
-                    knight.update(this.keys, this.canvas.width, this.canvas.height);
+                    knight.update(this.keys, this.canvas.width, this.canvas.height, this.mouse.canvasX, this.mouse.canvasY);
 
                     // In network mode, broadcast position/state if changed
-                    if (this.isNetworkMode && (oldX !== knight.x || oldY !== knight.y || oldRotation !== knight.rotation || oldBlocking !== knight.isBlocking)) {
+                    if (this.isNetworkMode && (oldX !== knight.x || oldY !== knight.y || oldRotation !== knight.rotation || oldBlocking !== knight.isBlocking || oldShieldDirection !== knight.shieldDirection)) {
                         networkManager.sendKnightMove({
                             playerId: knight.player.id,
                             x: knight.x,
                             y: knight.y,
                             rotation: knight.rotation,
-                            isBlocking: knight.isBlocking
+                            isBlocking: knight.isBlocking,
+                            shieldDirection: knight.shieldDirection
                         });
                     }
                 } else if (!this.isNetworkMode) {
@@ -1022,8 +1041,13 @@ class Game {
                 // In network mode, other players' knights don't move locally
                 // They wait for position updates from the network
 
-                // Update cooldowns (this should always run)
+                // Update cooldowns and shield recovery (this should always run)
                 knight.updateCooldowns();
+
+                // Shield recovery for all knights
+                if (!knight.isBlocking && knight.shieldHp < knight.maxShieldHp) {
+                    knight.shieldHp = Math.min(knight.maxShieldHp, knight.shieldHp + knight.shieldRecoveryRate);
+                }
 
                 // Handle attacks
                 if (knight.isAttacking) {
@@ -1082,34 +1106,76 @@ class Game {
 
             // Check if target is within attack cone
             if (Math.abs(angleDiff) <= coneAngleRad) {
-                // Check if target is blocking
-                let blocked = false;
-                if (target.isBlocking) {
-                    // Calculate angle from target to attacker
-                    const dx2 = attacker.x - target.x;
-                    const dy2 = attacker.y - target.y;
-                    const angleFromTarget = Math.atan2(dy2, dx2);
+                const damage = attacker.player.damage;
 
-                    // Calculate angle difference between block direction and attack direction
-                    let blockAngleDiff = angleFromTarget - target.rotation;
+                // Find all teammates (including target) who can block this attack with their shield
+                const blockingTeammates = [];
 
-                    // Normalize to -PI to PI
-                    while (blockAngleDiff > Math.PI) blockAngleDiff -= Math.PI * 2;
-                    while (blockAngleDiff < -Math.PI) blockAngleDiff += Math.PI * 2;
+                this.battleKnights.forEach(knight => {
+                    // Only check same team members who are alive and blocking with shield HP
+                    if (knight.team === target.team && knight.isAlive() && knight.isBlocking && knight.shieldHp > 0) {
+                        // Calculate angle from this knight to attacker
+                        const dx2 = attacker.x - knight.x;
+                        const dy2 = attacker.y - knight.y;
+                        const distToAttacker = Math.hypot(dx2, dy2);
 
-                    // Convert block angle to radians
-                    const blockAngleRad = (target.blockAngle * Math.PI / 180) / 2;
+                        // Check if attacker is close enough to this knight
+                        if (distToAttacker <= 150) { // Shield protection range
+                            const angleFromKnight = Math.atan2(dy2, dx2);
 
-                    // Check if attack is within block cone
-                    if (Math.abs(blockAngleDiff) <= blockAngleRad) {
-                        blocked = true;
-                        this.log(`${target.player.name} BLOCKED attack from ${attacker.player.name}!`);
-                        console.log(`Block successful: ${target.player.name} blocked ${attacker.player.name}`);
+                            // Calculate angle difference between shield direction and attack direction
+                            let blockAngleDiff = angleFromKnight - knight.shieldDirection;
+
+                            // Normalize to -PI to PI
+                            while (blockAngleDiff > Math.PI) blockAngleDiff -= Math.PI * 2;
+                            while (blockAngleDiff < -Math.PI) blockAngleDiff += Math.PI * 2;
+
+                            // Convert block angle to radians
+                            const blockAngleRad = (knight.blockAngle * Math.PI / 180) / 2;
+
+                            // Check if attack is within block cone
+                            if (Math.abs(blockAngleDiff) <= blockAngleRad) {
+                                blockingTeammates.push(knight);
+                            }
+                        }
                     }
-                }
+                });
 
-                if (!blocked) {
-                    const damage = attacker.player.damage;
+                // If any teammates are blocking (including target)
+                if (blockingTeammates.length > 0) {
+                    // Distribute damage across all blocking shields
+                    const damagePerShield = damage / blockingTeammates.length;
+
+                    blockingTeammates.forEach(blocker => {
+                        const damageToShield = Math.min(damagePerShield, blocker.shieldHp);
+                        blocker.shieldHp -= damageToShield;
+
+                        if (blocker === target) {
+                            this.log(`${target.player.name} BLOCKED ${Math.round(damageToShield)} damage! (${Math.round(blocker.shieldHp)}/${Math.round(blocker.maxShieldHp)})`);
+                        } else {
+                            this.log(`${blocker.player.name} protected ${target.player.name}! Blocked ${Math.round(damageToShield)} damage! (${Math.round(blocker.shieldHp)}/${Math.round(blocker.maxShieldHp)})`);
+                        }
+                    });
+
+                    // If all shields broke, apply overflow damage to target
+                    const totalShieldDamage = blockingTeammates.reduce((sum, b) => sum + Math.min(damagePerShield, b.shieldHp), 0);
+                    const overflowDamage = damage - totalShieldDamage;
+
+                    if (overflowDamage > 0) {
+                        target.takeDamage(overflowDamage);
+                        this.log(`Shields broke! ${target.player.name} took ${Math.round(overflowDamage)} HP damage!`);
+
+                        if (!target.isAlive()) {
+                            // Track kill
+                            if (!this.currentBattleStats[attacker.player.name]) {
+                                this.currentBattleStats[attacker.player.name] = { kills: 0, damageDealt: 0 };
+                            }
+                            this.currentBattleStats[attacker.player.name].kills++;
+                            this.log(`${target.player.name} was defeated!`);
+                        }
+                    }
+                } else {
+                    // No shields blocking - apply damage directly to target
                     target.takeDamage(damage);
 
                     // Network sync: Send damage event
@@ -1144,12 +1210,12 @@ class Game {
     }
 
     renderBattle() {
-        // Clear canvas
-        this.ctx.fillStyle = '#1a4d4d';
+        // Clear canvas with black background
+        this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw center line (more subtle now with random spawns)
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        // Draw center line with faint gold
+        this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([15, 15]);
         this.ctx.beginPath();
@@ -1158,8 +1224,8 @@ class Game {
         this.ctx.stroke();
         this.ctx.setLineDash([]);
 
-        // Draw arena grid
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        // Draw arena grid with faint gold lines
+        this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.08)';
         this.ctx.lineWidth = 1;
         for (let x = 0; x < this.canvas.width; x += 50) {
             this.ctx.beginPath();
@@ -1255,11 +1321,11 @@ class Game {
         this.ctx.fillText('Move', legendX + 150, yPos);
         yPos += lineHeight;
 
-        // Rotation
+        // Mouse Aim
         this.ctx.fillStyle = '#87CEEB'; // Sky blue
-        this.ctx.fillText('Q / E', legendX + 15, yPos);
+        this.ctx.fillText('MOUSE', legendX + 15, yPos);
         this.ctx.fillStyle = '#fff';
-        this.ctx.fillText('Rotate', legendX + 150, yPos);
+        this.ctx.fillText('Aim (All)', legendX + 150, yPos);
         yPos += lineHeight;
 
         // Attack
@@ -1279,7 +1345,7 @@ class Game {
         // Additional info
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         this.ctx.font = '11px Arial';
-        this.ctx.fillText('Block covers 180° front', legendX + 15, yPos);
+        this.ctx.fillText('Mouse aims attack & shield', legendX + 15, yPos);
     }
 
     endBattle(winner) {
@@ -1752,7 +1818,7 @@ class Knight {
         this.team = team;
         this.hp = player.maxHp;
         this.size = 35;
-        this.speed = 1.25; // Very slow, tactical movement
+        this.speed = 1.5; // Movement speed (reduced by 40%)
         this.attackRange = player.attackRange; // Use player's randomized range
         this.attackAngle = 60; // Cone angle in degrees (30° each side)
         this.rotation = team === 'left' ? 0 : Math.PI; // Facing angle in radians (0 = right, PI = left)
@@ -1769,46 +1835,55 @@ class Knight {
         this.swordSwingActive = false;
         this.damageAppliedThisSwing = false;
 
-        // Blocking system (hold-based, 180° line defense)
+        // Shield system with health
         this.isBlocking = false;
-        this.blockAngle = 180; // degrees (90° each side - full front line)
+        this.blockAngle = 90; // 90° arc coverage (1/4 of circle)
+        this.shieldDirection = this.rotation; // Direction shield is facing
+        this.maxShieldHp = player.maxHp * 0.5; // 50% of max HP
+        this.shieldHp = this.maxShieldHp;
+        this.shieldRecoveryRate = this.maxShieldHp * 0.05 / 60; // 5% per second at 60fps
     }
 
-    update(keys, canvasWidth, canvasHeight) {
-        // Rotation controls
-        if (keys['q'] || keys['Q']) {
-            this.rotation -= this.rotationSpeed; // Rotate counter-clockwise
+    update(keys, canvasWidth, canvasHeight, mouseX, mouseY) {
+        // Calculate both shield and attack direction based on mouse position
+        if (mouseX !== undefined && mouseY !== undefined) {
+            const dx = mouseX - this.x;
+            const dy = mouseY - this.y;
+            this.shieldDirection = Math.atan2(dy, dx);
+            this.rotation = Math.atan2(dy, dx); // Attack also follows mouse
         }
-        if (keys['e'] || keys['E']) {
-            this.rotation += this.rotationSpeed; // Rotate clockwise
-        }
-
-        // Normalize rotation to 0-2PI
-        while (this.rotation < 0) this.rotation += Math.PI * 2;
-        while (this.rotation >= Math.PI * 2) this.rotation -= Math.PI * 2;
 
         // Hold-based blocking with C key
         this.isBlocking = (keys['c'] || keys['C']);
 
-        // Movement controls (WASD / Arrow keys) - can't move while blocking
-        if (!this.isBlocking) {
-            if (keys['ArrowUp'] || keys['w']) {
-                this.y -= this.speed;
-            }
-            if (keys['ArrowDown'] || keys['s']) {
-                this.y += this.speed;
-            }
-            if (keys['ArrowLeft'] || keys['a']) {
-                this.x -= this.speed;
-            }
-            if (keys['ArrowRight'] || keys['d']) {
-                this.x += this.speed;
-            }
+        // Shield health recovery when not blocking (5% per second)
+        if (!this.isBlocking && this.shieldHp < this.maxShieldHp) {
+            this.shieldHp = Math.min(this.maxShieldHp, this.shieldHp + this.shieldRecoveryRate);
+        }
 
-            // Attack with space - can't attack while blocking
-            if (keys[' '] && this.attackCooldown === 0) {
-                this.attack();
-            }
+        // Movement controls (WASD / Arrow keys)
+        let moveX = 0, moveY = 0;
+
+        if (keys['ArrowUp'] || keys['w']) {
+            moveY -= this.speed;
+        }
+        if (keys['ArrowDown'] || keys['s']) {
+            moveY += this.speed;
+        }
+        if (keys['ArrowLeft'] || keys['a']) {
+            moveX -= this.speed;
+        }
+        if (keys['ArrowRight'] || keys['d']) {
+            moveX += this.speed;
+        }
+
+        // Update position
+        this.x += moveX;
+        this.y += moveY;
+
+        // Attack with space (can't attack while blocking)
+        if (keys[' '] && this.attackCooldown === 0 && !this.isBlocking) {
+            this.attack();
         }
 
         // Boundary checking
@@ -1966,71 +2041,66 @@ class Knight {
     }
 
     renderBlock(ctx) {
-        if (!this.isBlocking) return;
+        if (!this.isBlocking || this.shieldHp <= 0) return;
 
-        // Draw shield effect in front of knight
-        const shieldDistance = this.size * 0.8;
-        const shieldSize = this.size * 1.2;
-
-        // Calculate shield position
-        const shieldX = this.x + Math.cos(this.rotation) * shieldDistance;
-        const shieldY = this.y + Math.sin(this.rotation) * shieldDistance;
+        // Draw concave shield arc as a curved line closer to the player (90 degrees)
+        const shieldRadius = this.size * 1.2; // Closer to the knight
+        const blockAngleRad = (this.blockAngle * Math.PI / 180) / 2; // 45° each side
 
         ctx.save();
 
+        // Shield health percentage for visual effects
+        const shieldHealthPercent = this.shieldHp / this.maxShieldHp;
+
         // Shield glow effect
         ctx.shadowBlur = 20;
-        ctx.shadowColor = '#00BFFF';
+        ctx.shadowColor = shieldHealthPercent > 0.3 ? '#00BFFF' : '#FF6B6B';
 
-        // Pulsing effect based on block timer
-        const pulseScale = 1 + Math.sin((this.blockTimer / this.blockDuration) * Math.PI * 4) * 0.1;
-
-        // Shield arc (wider than attack cone)
-        const blockAngleRad = (this.blockAngle * Math.PI / 180) / 2;
-
-        // Translucent shield bubble
-        ctx.globalAlpha = 0.4;
-        ctx.fillStyle = '#00BFFF';
+        // Draw thick concave arc line (no fill, just the curved line)
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = shieldHealthPercent > 0.5 ? '#87CEEB' : shieldHealthPercent > 0.25 ? '#FFA500' : '#FF6B6B';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.arc(
-            shieldX,
-            shieldY,
-            shieldSize * pulseScale,
-            this.rotation - blockAngleRad,
-            this.rotation + blockAngleRad
+            this.x,
+            this.y,
+            shieldRadius,
+            this.shieldDirection - blockAngleRad,
+            this.shieldDirection + blockAngleRad
         );
-        ctx.lineTo(shieldX, shieldY);
-        ctx.fill();
+        ctx.stroke();
 
-        // Bright shield outline
-        ctx.globalAlpha = 0.8;
-        ctx.strokeStyle = '#87CEEB';
+        // Inner glow line for depth
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.arc(
-            shieldX,
-            shieldY,
-            shieldSize * pulseScale,
-            this.rotation - blockAngleRad,
-            this.rotation + blockAngleRad
+            this.x,
+            this.y,
+            shieldRadius,
+            this.shieldDirection - blockAngleRad,
+            this.shieldDirection + blockAngleRad
         );
         ctx.stroke();
 
-        // Shield emblem/cross in center
+        // Shield health bar next to knight
+        const barWidth = 40;
+        const barHeight = 5;
+        const barX = this.x - barWidth / 2;
+        const barY = this.y + this.size / 2 + 35;
+
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 3;
-        const emblemSize = shieldSize * 0.3;
-        // Vertical line
-        ctx.beginPath();
-        ctx.moveTo(shieldX, shieldY - emblemSize);
-        ctx.lineTo(shieldX, shieldY + emblemSize);
-        ctx.stroke();
-        // Horizontal line
-        ctx.beginPath();
-        ctx.moveTo(shieldX - emblemSize, shieldY);
-        ctx.lineTo(shieldX + emblemSize, shieldY);
-        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Shield HP
+        ctx.fillStyle = shieldHealthPercent > 0.5 ? '#00BFFF' : shieldHealthPercent > 0.25 ? '#FFA500' : '#FF0000';
+        ctx.fillRect(barX, barY, barWidth * shieldHealthPercent, barHeight);
 
         ctx.restore();
     }

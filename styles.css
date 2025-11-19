@@ -11,8 +11,8 @@ html {
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #004d4d 0%, #008B8B 50%, #20B2AA 100%);
-    color: #fff;
+    background: #FFFFFF;
+    color: #333;
     min-height: 100vh;
     display: flex;
     align-items: flex-start;
@@ -46,28 +46,29 @@ body {
     text-align: center;
     font-size: 3em;
     margin-bottom: 30px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    color: #45bbce;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
 }
 
 .estimation-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 30px;
-    background: rgba(255,255,255,0.1);
+    background: #f5f5f5;
     padding: 30px;
     border-radius: 15px;
-    backdrop-filter: blur(10px);
+    border: 1px solid #ddd;
     margin-bottom: 30px;
 }
 
 .estimation-input-section h2,
 .estimation-results h2 {
-    color: #00CED1;
+    color: #45bbce;
     margin-bottom: 15px;
 }
 
 .helper-text {
-    color: rgba(255,255,255,0.8);
+    color: #666;
     margin-bottom: 20px;
     line-height: 1.5;
 }
@@ -76,10 +77,10 @@ body {
     width: 100%;
     min-height: 300px;
     padding: 15px;
-    border: 2px solid rgba(0,206,209,0.3);
+    border: 2px solid #45bbce;
     border-radius: 10px;
-    background: rgba(0,0,0,0.3);
-    color: #fff;
+    background: #fff;
+    color: #333;
     font-size: 16px;
     font-family: Arial, sans-serif;
     resize: vertical;
@@ -88,8 +89,8 @@ body {
 
 #taskDescription:focus {
     outline: none;
-    border-color: #00CED1;
-    box-shadow: 0 0 10px rgba(0,206,209,0.5);
+    border-color: #45bbce;
+    box-shadow: 0 0 10px rgba(69, 187, 206, 0.3);
 }
 
 .analyze-btn {
@@ -112,15 +113,16 @@ body {
 
 .analysis-results {
     min-height: 300px;
-    background: rgba(0,0,0,0.3);
+    background: #e8e8e8;
     border-radius: 10px;
     padding: 20px;
+    border: 1px solid #ccc;
 }
 
 .waiting-message {
     text-align: center;
     padding: 60px 20px;
-    color: rgba(255,255,255,0.6);
+    color: #666;
 }
 
 .ai-icon {
@@ -223,7 +225,7 @@ body {
 }
 
 .point-label {
-    color: rgba(255,255,255,0.8);
+    color: #666;
     font-size: 14px;
 }
 
@@ -314,23 +316,24 @@ body {
     text-align: center;
     font-size: 3em;
     margin-bottom: 30px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    color: #45bbce;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
 }
 
 .setup-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 30px;
-    background: rgba(255,255,255,0.1);
+    background: #f5f5f5;
     padding: 30px;
     border-radius: 15px;
-    backdrop-filter: blur(10px);
+    border: 1px solid #ddd;
 }
 
 .player-input-section h2,
 .instructions h3 {
     margin-bottom: 20px;
-    color: #00CED1;
+    color: #45bbce;
 }
 
 .input-group {
@@ -366,9 +369,10 @@ body {
 .players-list {
     max-height: 400px;
     overflow-y: auto;
-    background: rgba(0,0,0,0.3);
+    background: #e8e8e8;
     padding: 15px;
     border-radius: 8px;
+    border: 1px solid #ccc;
 }
 
 .player-item {
@@ -376,9 +380,11 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px;
-    background: rgba(255,255,255,0.1);
+    background: #fff;
     margin-bottom: 8px;
     border-radius: 5px;
+    border: 1px solid #ddd;
+    color: #333;
 }
 
 .player-item button {
@@ -506,61 +512,95 @@ body {
 
 /* Battle Screen */
 #battleScreen {
-    display: flex;
+    display: none; /* Hidden by default */
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #1a1a1a;
+    overflow: hidden;
+    padding: 0;
+    z-index: 1000;
+}
+
+#battleScreen.active {
+    display: flex; /* Show as flex when active */
 }
 
 .battle-hud {
-    width: 100%;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 1400px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 15px;
-    background: rgba(0,0,0,0.5);
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.7);
     border-radius: 10px;
+    z-index: 10;
 }
 
 .current-match {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: bold;
     color: #00CED1;
 }
 
 .battle-timer {
-    font-size: 20px;
+    font-size: 18px;
 }
 
 #gameCanvas {
-    border: 5px solid #00CED1;
+    max-width: 95vw;
+    max-height: 85vh;
+    border: 3px solid #FFD700;
     border-radius: 10px;
-    background: #1a4d4d;
-    box-shadow: 0 0 30px rgba(0,206,209,0.3);
+    background: #000000;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    cursor: crosshair;
 }
 
 .battle-log {
-    width: 100%;
-    max-width: 1000px;
-    margin-top: 20px;
-    padding: 15px;
-    background: rgba(0,0,0,0.5);
+    display: none; /* Hidden during battle */
+    position: absolute;
+    bottom: 60px;
+    left: 10px;
+    width: 350px;
+    padding: 10px;
+    background: rgba(0,0,0,0.8);
     border-radius: 10px;
-    max-height: 150px;
+    max-height: 120px;
     overflow-y: auto;
+    font-size: 12px;
+    z-index: 10;
 }
 
 .battle-log p {
-    padding: 5px 0;
+    padding: 3px 0;
     border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .controls-hint {
-    margin-top: 15px;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     gap: 30px;
-    font-size: 18px;
+    font-size: 16px;
+    font-weight: bold;
     color: #00CED1;
+    background: rgba(0,0,0,0.7);
+    padding: 10px 30px;
+    border-radius: 10px;
+    z-index: 10;
 }
 
 /* Winner Screen */
@@ -580,10 +620,11 @@ body {
 }
 
 .winner-display {
-    background: rgba(255,255,255,0.1);
+    background: #f5f5f5;
     padding: 50px;
     border-radius: 15px;
     margin-bottom: 30px;
+    border: 1px solid #ddd;
 }
 
 .victory-crown {
@@ -609,17 +650,16 @@ body {
 .victory-number {
     font-size: 8em;
     font-weight: bold;
-    text-shadow:
-        0 0 20px currentColor,
-        0 0 40px currentColor,
-        0 0 60px currentColor,
-        4px 4px 8px rgba(0,0,0,0.5);
+    color: #fff;
+    -webkit-text-stroke: 4px #FFD700;
+    text-stroke: 4px #FFD700;
     animation: numberGlow 2s ease-in-out infinite;
     padding: 20px 40px;
-    background: rgba(0,0,0,0.3);
+    background: #000;
     border-radius: 20px;
-    border: 5px solid currentColor;
+    border: 5px solid #FFD700;
     display: inline-block;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 @keyframes numberGlow {
@@ -635,21 +675,21 @@ body {
 
 .victory-text {
     font-size: 2.5em;
-    color: #00CED1;
+    color: #45bbce;
     margin: 30px 0;
-    text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     letter-spacing: 3px;
 }
 
 .survivor-count {
     font-size: 1.5em;
-    color: #00CED1;
+    color: #45bbce;
     margin: 20px 0;
 }
 
 .winner-display h2 {
     font-size: 3em;
-    color: #00CED1;
+    color: #45bbce;
     margin-bottom: 20px;
 }
 
@@ -660,7 +700,7 @@ body {
 }
 
 .winner-display .winner-stats h3 {
-    color: #00CED1;
+    color: #45bbce;
     margin: 20px 0 10px 0;
     text-align: center;
 }
@@ -673,11 +713,13 @@ body {
 .winner-display .winner-stats li {
     padding: 12px;
     margin: 5px 0;
-    background: rgba(255, 255, 255, 0.1);
+    background: #fff;
     border-radius: 5px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border: 1px solid #ddd;
+    color: #333;
 }
 
 .points-badge {
@@ -688,12 +730,28 @@ body {
     margin: 0 10px;
 }
 
+/* Header with Logo */
+.header-with-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 50px;
+}
+
+.header-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+}
+
 /* Login Screen */
 #loginScreen h1 {
     text-align: center;
     font-size: 3.5em;
-    margin-bottom: 50px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin: 0;
+    color: #45bbce;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
 }
 
 .login-container {
@@ -768,23 +826,25 @@ body {
     text-align: center;
     font-size: 3em;
     margin-bottom: 30px;
+    color: #45bbce;
 }
 
 .network-login-container {
     max-width: 800px;
     margin: 0 auto;
-    background: rgba(255, 255, 255, 0.1);
+    background: #f5f5f5;
     padding: 40px;
     border-radius: 15px;
-    backdrop-filter: blur(10px);
+    border: 1px solid #ddd;
 }
 
 .network-info {
-    background: rgba(0, 0, 0, 0.3);
+    background: #e8e8e8;
     padding: 30px;
     border-radius: 10px;
     margin-bottom: 30px;
     text-align: center;
+    border: 1px solid #ccc;
 }
 
 .network-status {
@@ -799,14 +859,15 @@ body {
 }
 
 .network-url strong {
-    color: #00CED1;
-    background: rgba(0, 0, 0, 0.3);
+    color: #000;
+    background: #fff;
     padding: 5px 15px;
     border-radius: 5px;
+    border: 2px solid #45bbce;
 }
 
 .network-instruction {
-    color: rgba(255, 255, 255, 0.7);
+    color: #666;
     font-style: italic;
 }
 
@@ -820,21 +881,24 @@ body {
 }
 
 .network-players-list {
-    background: rgba(0, 0, 0, 0.3);
+    background: #e8e8e8;
     padding: 20px;
     border-radius: 10px;
     min-height: 150px;
+    border: 1px solid #ccc;
 }
 
 .network-player-item {
     padding: 12px;
-    background: rgba(255, 255, 255, 0.1);
+    background: #fff;
     border-radius: 5px;
     margin-bottom: 10px;
     display: flex;
     flex-direction: column;
     gap: 5px;
     align-items: flex-start;
+    border: 1px solid #ddd;
+    color: #333;
 }
 
 .room-selection {
@@ -896,9 +960,9 @@ body {
 }
 
 .or-divider span {
-    background: rgba(0, 0, 0, 0.3);
+    background: #f5f5f5;
     padding: 0 15px;
-    color: rgba(255, 255, 255, 0.6);
+    color: #666;
     font-weight: bold;
 }
 
@@ -928,14 +992,15 @@ body {
 }
 
 .add-player-section {
-    background: rgba(0, 0, 0, 0.3);
+    background: #e8e8e8;
     padding: 20px;
     border-radius: 10px;
     margin: 20px 0;
+    border: 1px solid #ccc;
 }
 
 .add-player-section h4 {
-    color: #00CED1;
+    color: #45bbce;
     margin-bottom: 15px;
 }
 
@@ -950,16 +1015,16 @@ body {
     padding: 15px;
     font-size: 16px;
     font-weight: bold;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 2px solid #00CED1;
+    background: #fff;
+    color: #333;
+    border: 2px solid #45bbce;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s;
 }
 
 .action-btn:hover {
-    background: rgba(0, 206, 209, 0.2);
+    background: #e0f2f5;
     transform: scale(1.02);
 }
 
@@ -986,6 +1051,7 @@ body {
     text-align: center;
     font-size: 3em;
     margin-bottom: 30px;
+    color: #45bbce;
 }
 
 .rankings-container {
@@ -1047,14 +1113,15 @@ body {
 }
 
 .rankings-table-section {
-    background: rgba(255, 255, 255, 0.1);
+    background: #f5f5f5;
     padding: 30px;
     border-radius: 15px;
     margin-bottom: 30px;
+    border: 1px solid #ddd;
 }
 
 .rankings-table-section h2 {
-    color: #00CED1;
+    color: #45bbce;
     margin-bottom: 20px;
     text-align: center;
 }
@@ -1062,29 +1129,31 @@ body {
 .rankings-table {
     width: 100%;
     border-collapse: collapse;
-    background: rgba(0, 0, 0, 0.3);
+    background: #fff;
     border-radius: 10px;
     overflow: hidden;
+    border: 1px solid #ccc;
 }
 
 .rankings-table thead {
-    background: rgba(0, 206, 209, 0.3);
+    background: #e0f2f5;
 }
 
 .rankings-table th {
     padding: 15px;
     text-align: left;
-    color: #00CED1;
+    color: #45bbce;
     font-weight: bold;
 }
 
 .rankings-table td {
     padding: 12px 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid #ddd;
+    color: #333;
 }
 
 .rankings-table tr:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #f5f5f5;
 }
 
 .rank-badge {

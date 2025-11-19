@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Story Point Arena</title>
+    <link rel="icon" type="image/png" href="https://blogimage.vantagefit.io/vfitimages/2023/09/Ideagen.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <!-- Login Mode Selection Screen -->
         <div id="loginScreen" class="screen active">
-            <h1>Story Point Arena</h1>
+            <div class="header-with-logo">
+                <img src="https://blogimage.vantagefit.io/vfitimages/2023/09/Ideagen.png" alt="Logo" class="header-logo">
+                <h1>Story Point Arena</h1>
+            </div>
             <div class="login-container">
                 <div class="login-option">
                     <button id="networkLoginBtn" class="mode-btn network-btn">
@@ -150,11 +154,14 @@
                         <li>Players with same story points = SAME TEAM</li>
                         <li>Teams: Red vs Cyan (based on story points)</li>
                         <li>ALL players spawn randomly on the battlefield!</li>
-                        <li>You control first knight (Arrow Keys/WASD + Q/E + SPACE)</li>
+                        <li>You control first knight (WASD/Arrows + MOUSE + SPACE)</li>
                         <li>AI controls the rest automatically</li>
-                        <li>Attacks are DIRECTIONAL - face your target!</li>
-                        <li>Use Q/E to rotate and aim your attacks</li>
-                        <li>Press C to BLOCK attacks from your front!</li>
+                        <li>Move with WASD/Arrows, aim with MOUSE!</li>
+                        <li>MOUSE controls BOTH attack & shield direction</li>
+                        <li>Hold C to activate SHIELD (blocks in mouse direction)</li>
+                        <li>Shield has HP (50% of max) and recovers at 5%/sec</li>
+                        <li>TEAMWORK: Protect allies with your shield!</li>
+                        <li>Multiple shields split damage - coordinate defense!</li>
                         <li>Sword swipes deal damage mid-swing</li>
                         <li>Random attack ranges (40-78 pixels)</li>
                         <li>Same team CANNOT attack each other</li>
@@ -215,8 +222,7 @@
             <div id="battleLog" class="battle-log"></div>
             <div class="controls-hint">
                 <span>Move: ↑↓←→ or WASD</span>
-                <span>Rotate: Q/E</span>
-                <span>Block: C</span>
+                <span>Shield: MOUSE + C</span>
                 <span>Attack: SPACE</span>
             </div>
         </div>
