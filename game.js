@@ -58,6 +58,9 @@ class Game {
         // Estimation screen
         document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeTask());
         document.getElementById('proceedToSetupBtn').addEventListener('click', () => this.proceedToSetup());
+
+        // Network estimation button
+        document.getElementById('networkAnalyzeBtn').addEventListener('click', () => this.analyzeNetworkTask());
         document.getElementById('taskDescription').addEventListener('input', () => {
             // Clear results when user starts typing again
             const resultsDiv = document.getElementById('analysisResults');
@@ -546,16 +549,64 @@ class Game {
         `;
     }
 
-    proceedToSetup() {
-        this.showScreen(GameState.SETUP);
+    analyzeNetworkTask() {
+        const textarea = document.getElementById('networkTaskDescription');
+        const text = textarea.value.trim();
 
-        // Scroll to player input section
+        if (!text) {
+            alert('Please enter a task description first!');
+            return;
+        }
+
+        // Show loading state
+        const resultsDiv = document.getElementById('networkAnalysisResults');
+        resultsDiv.innerHTML = '<div class="analyzing"><span class="spinner">⚙️</span><p>Analyzing task complexity...</p></div>';
+
+        // Simulate AI processing delay
         setTimeout(() => {
-            const playerInputSection = document.querySelector('.player-input-section');
-            if (playerInputSection) {
-                playerInputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 300);
+            const analysis = this.performAIAnalysis(text);
+            this.displayNetworkAnalysis(analysis);
+        }, 1500);
+    }
+
+    displayNetworkAnalysis(analysis) {
+        const resultsDiv = document.getElementById('networkAnalysisResults');
+        resultsDiv.innerHTML = `
+            <div class="analysis-complete">
+                <div class="recommendation-box">
+                    <h3>Recommended Story Points</h3>
+                    <div class="story-points-recommendation">
+                        ${analysis.recommendedPoints.map(points =>
+                            `<span class="story-point-badge large">${points}</span>`
+                        ).join(' or ')}
+                    </div>
+                    <p class="confidence-level">Confidence: <strong>${analysis.confidence}</strong></p>
+                </div>
+
+                <div class="analysis-details">
+                    <h4>Analysis Summary</h4>
+                    <div class="analysis-metrics">
+                        <span class="metric">📝 ${analysis.words} words</span>
+                        <span class="metric">📊 Complexity: ${analysis.complexityScore}/100</span>
+                    </div>
+                    <div class="reasoning-box">
+                        <h4>Reasoning:</h4>
+                        <ul>
+                            ${analysis.reasoning.map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="action-hint">
+                    💡 Use these story points when adding players below!
+                </div>
+            </div>
+        `;
+    }
+
+    proceedToSetup() {
+        // After estimation in local mode, go to setup
+        this.showScreen(GameState.SETUP);
     }
 
     // LocalStorage methods
@@ -597,11 +648,12 @@ class Game {
         this.isNetworkMode = true;
         this.networkPlayers = [];
 
-        // Show room selection, hide lobby
+        // Show room selection, hide lobby and estimation
         document.getElementById('roomSelection').style.display = 'block';
         document.getElementById('lobbyContainer').style.display = 'none';
         document.getElementById('roomInfo').style.display = 'none';
         document.getElementById('shareInstruction').style.display = 'none';
+        document.getElementById('networkEstimationSection').style.display = 'none';
 
         this.updateNetworkPlayersList();
     }
@@ -684,15 +736,18 @@ class Game {
         const hostIndicator = document.getElementById('hostIndicator');
         const startBattleButton = document.getElementById('networkStartBattleBtn');
         const startRaceButton = document.getElementById('networkStartRaceBtn');
+        const networkEstimationSection = document.getElementById('networkEstimationSection');
 
         if (isHost) {
             hostIndicator.style.display = 'block';
             if (startBattleButton) startBattleButton.style.display = 'inline-block';
             if (startRaceButton) startRaceButton.style.display = 'inline-block';
+            if (networkEstimationSection) networkEstimationSection.style.display = 'block';
         } else {
             hostIndicator.style.display = 'none';
             if (startBattleButton) startBattleButton.style.display = 'none';
             if (startRaceButton) startRaceButton.style.display = 'none';
+            if (networkEstimationSection) networkEstimationSection.style.display = 'none';
         }
     }
 
@@ -1382,9 +1437,12 @@ class Game {
         // Bottom lane label (at bottom of lane)
         this.raceCtx.fillText(`Team SP ${rightTeamPoints}`, 10, this.raceCanvas.height - 10);
 
-        // Draw cheering people
-        this.drawCheeringPeople(120, 30, this.teams.left[0].color, 'left'); // Top left for top team
-        this.drawCheeringPeople(this.raceCanvas.width - 120, 30, this.teams.right[0].color, 'right'); // Top right for bottom team
+        // Draw cheering people outside the lanes (in the side margins)
+        // Left team supporters on the left margin (top lane area)
+        this.drawCheeringPeople(25, 50, this.teams.left[0].color, 'left');
+
+        // Right team supporters on the right margin (bottom lane area)
+        this.drawCheeringPeople(this.raceCanvas.width - 25, 230, this.teams.right[0].color, 'right');
 
         // Draw countdown or race elements
         if (!this.raceData.raceStarted) {
@@ -1488,11 +1546,11 @@ class Game {
     drawCheeringPeople(x, y, teamColor, side) {
         const ctx = this.raceCtx;
 
-        // Draw 3 cheering people
+        // Draw 3 cheering people stacked vertically (for side margins)
         for (let i = 0; i < 3; i++) {
-            const offsetX = i * 30;
-            const personX = side === 'left' ? x + offsetX : x - offsetX;
-            const personY = y;
+            const offsetY = i * 50; // Vertical stacking
+            const personX = x;
+            const personY = y + offsetY;
 
             // Animate arms up/down based on gallop frame
             const armOffset = this.raceData.raceStarted && (side === 'left' ? this.raceData.leftGallopFrame : this.raceData.rightGallopFrame) ? -5 : 5;
@@ -1534,12 +1592,12 @@ class Game {
             ctx.stroke();
         }
 
-        // Draw "GO!" text above people
+        // Draw "GO!" text above the group of people
         if (this.raceData.raceStarted) {
-            ctx.font = 'bold 16px Arial';
+            ctx.font = 'bold 18px Arial';
             ctx.fillStyle = teamColor;
             ctx.textAlign = 'center';
-            ctx.fillText('GO!', x + (side === 'left' ? 30 : -30), y - 20);
+            ctx.fillText('GO!', x, y - 20);
         }
     }
 

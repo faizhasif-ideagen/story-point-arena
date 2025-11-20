@@ -52,11 +52,12 @@ Single-page application with vanilla JavaScript, no frameworks or build tools. A
 ### Core Concepts
 
 **Game State Management**: The game uses a finite state machine with multiple states:
-- LOGIN: Choose between Network Play or Local Play
-- NETWORK_LOGIN: Multiplayer lobby (create/join rooms, add players)
-- ESTIMATION: AI-powered story point estimation (local mode)
+- LOGIN: Choose between Network Play or Local Play (first screen)
+- NETWORK_LOGIN: Multiplayer lobby with embedded AI estimation at top (host only), create/join rooms, add players
+- ESTIMATION: AI-powered story point estimation (shown before setup in local mode)
 - SETUP: Player registration with story points selection (local mode)
 - BATTLE: Real-time team combat on HTML5 canvas with ALL players displayed
+- HORSE_RACE: Team-based clicking race with hurdles
 - WINNER: Winning team display
 - RANKINGS: Player statistics and leaderboard
 
@@ -104,11 +105,22 @@ Single-page application with vanilla JavaScript, no frameworks or build tools. A
 
 ### Data Flow
 
-1. Setup → Players added with name + story points → Stats generated → Player list updates
-2. Battle Start → Teams created by story point grouping → Teams split left/right
-3. Knight Spawning → ALL players spawned simultaneously (left team on left, right team on right)
-4. Game Loop → Player controls first knight, AI controls all others → Attack checks include team validation
-5. Battle End → Winning team determined → Team stats and survivors displayed
+**Network Play:**
+1. Mode Selection → Choose Network Play
+2. Network Lobby → Host sees AI estimation at top (optional) → Create/join room → Add players
+3. Game Mode Selection → Host chooses Battle Arena or Horse Race
+4. Battle/Race Start → Teams created by story point grouping → Teams split left/right
+5. Gameplay → All players participate simultaneously
+6. Game End → Winning team determined → Stats displayed
+
+**Local Play:**
+1. Mode Selection → Choose Local Play
+2. Estimation → AI analyzes task description and recommends story points (optional)
+3. Setup → Players added with name + story points → Stats generated → Player list updates
+4. Game Mode Selection → Choose Battle Arena or Horse Race
+5. Battle/Race Start → Teams created by story point grouping → Teams split left/right
+6. Gameplay → All players participate simultaneously
+7. Game End → Winning team determined → Stats displayed
 
 ### State Management
 

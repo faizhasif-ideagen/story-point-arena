@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Point Arena - Game Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            text-align: center;
+            color: white;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        h3 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        ul {
+            list-style: none;
+            max-width: 900px;
+        }
+
+        li {
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            margin: 10px 0;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 1000px;
+            margin-top: 20px;
+        }
+
+        .feature-box {
+            background: rgba(255,255,255,0.15);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-size: 1.5rem;
+            color: white;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+        }
+
+        .highlight {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            font-size: 1.8rem;
+            opacity: 0.9;
+            margin-top: -10px;
+        }
+
+        .code-block {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.3rem;
+            max-width: 800px;
+            text-align: left;
+            margin: 20px auto;
+        }
+
+        .knight-visual {
+            width: 80px;
+            height: 80px;
+            margin: 20px;
+            display: inline-block;
+        }
+
+        .stats-table {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 700px;
+            margin: 20px auto;
+        }
+
+        .horse-race-slide {
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%) !important;
+        }
+
+        .horse-race-slide h2 {
+            color: #FFD700 !important;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+
+        .horse-race-slide h3 {
+            color: #FAFAD2 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="slide-counter">
+            <span id="currentSlide">1</span> / <span id="totalSlides">11</span>
+        </div>
+
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <h1>⚔️ Story Point Arena 🐴</h1>
+            <p class="subtitle">Real-Time Multiplayer Team Combat & Racing</p>
+            <p style="margin-top: 50px; font-size: 1.3rem; opacity: 0.8;">
+                A browser-based multiplayer game where story points determine your destiny
+            </p>
+        </div>
+
+        <!-- Slide 2: What is it? -->
+        <div class="slide">
+            <h2>What is Story Point Arena?</h2>
+            <ul>
+                <li>🎮 Real-time multiplayer browser game</li>
+                <li>🤝 Team-based gameplay with simultaneous action</li>
+                <li>📊 Story points (Fibonacci) determine team membership</li>
+                <li>🌐 Play with 2-20 friends across different devices</li>
+                <li>⚔️ Two game modes: <span class="highlight">Battle</span> & <span class="highlight">Horse Race</span></li>
+            </ul>
+        </div>
+
+        <!-- Slide 3: Key Features -->
+        <div class="slide">
+            <h2>Key Features</h2>
+            <div class="feature-grid">
+                <div class="feature-box">
+                    <h3>🔗 WebSocket Magic</h3>
+                    <p>Real-time sync with Socket.io</p>
+                </div>
+                <div class="feature-box">
+                    <h3>🏰 Room System</h3>
+                    <p>6-character codes for private games</p>
+                </div>
+                <div class="feature-box">
+                    <h3>👥 2-20 Players</h3>
+                    <p>Massive multiplayer battles</p>
+                </div>
+                <div class="feature-box">
+                    <h3>🎲 Random Stats</h3>
+                    <p>Every knight is unique</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: How Teams Work -->
+        <div class="slide">
+            <h2>Team System</h2>
+            <h3>Story Points = Team ID</h3>
+            <ul>
+                <li>Players choose Fibonacci story points (1, 2, 3, 5, 8, 13, 21)</li>
+                <li>Same story point = Same team (no friendly fire!)</li>
+                <li>Teams split: <span class="highlight">Left Side vs Right Side</span></li>
+                <li>Lower story points fight from the left</li>
+                <li>Higher story points fight from the right</li>
+            </ul>
+        </div>
+
+        <!-- Slide 5: Battle Mechanics -->
+        <div class="slide">
+            <h2>Battle Mechanics</h2>
+            <div class="stats-table">
+                <h3>Base Stats</h3>
+                <p>❤️ HP: 20 + random bonus (0-15)</p>
+                <p>⚔️ Damage: 5 + random bonus (0-15)</p>
+                <p>🎯 Attack Range: 80-155 pixels</p>
+                <p>⏱️ Attack Cooldown: ~2 seconds</p>
+                <p>🚶 Movement: 1.25 pixels/frame (tactical pace)</p>
+                <p>📐 Attack Cone: 60° directional attacks</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Gameplay -->
+        <div class="slide">
+            <h2>Battle Mode: How to Play</h2>
+            <ul>
+                <li>🎮 <span class="highlight">Control your knight</span> (arrow keys/WASD + space to attack)</li>
+                <li>🤖 Other players control their knights in real-time</li>
+                <li>👀 Knights must face enemies to attack (directional combat)</li>
+                <li>🎯 Strategic positioning and teamwork are key</li>
+                <li>⚔️ All combat synchronized across all players</li>
+                <li>🏆 Last team standing wins!</li>
+            </ul>
+        </div>
+
+        <!-- Slide 7: Horse Race Mode -->
+        <div class="slide horse-race-slide">
+            <h2>🐴 Horse Race Mode</h2>
+            <h3>Team Clicking Competition!</h3>
+            <ul>
+                <li>🏁 Teams race to 100% - first to finish wins</li>
+                <li>⌨️ <span class="highlight">SPACEBAR to gallop</span> - each tap moves your team 1%</li>
+                <li>🚧 <span class="highlight">5 random hurdles</span> per lane at 20-80% of track</li>
+                <li>🦘 Hit a hurdle? Tap <span class="highlight">'C' key 10 times</span> to jump over it!</li>
+                <li>👥 ALL teammates' clicks count together simultaneously</li>
+                <li>⏱️ 3-2-1 countdown, then GO! Fastest team wins!</li>
+            </ul>
+        </div>
+
+        <!-- Slide 8: Multiplayer Mode -->
+        <div class="slide">
+            <h2>Multiplayer Mode</h2>
+            <h3>Connect & Play</h3>
+            <ul>
+                <li>🌐 <span class="highlight">Host creates room</span> → Gets 6-character code</li>
+                <li>📱 Friends join with room code from any device</li>
+                <li>➕ Everyone adds their characters with story points</li>
+                <li>🎮 Host chooses: <span class="highlight">⚔️ Battle or 🐴 Horse Race</span></li>
+                <li>🚀 Real-time synchronized gameplay across all devices!</li>
+            </ul>
+        </div>
+
+        <!-- Slide 9: Technical Stack -->
+        <div class="slide">
+            <h2>Technical Architecture</h2>
+            <div class="feature-grid">
+                <div class="feature-box">
+                    <h3>Frontend</h3>
+                    <p>Vanilla JavaScript</p>
+                    <p>HTML5 Canvas</p>
+                    <p>Socket.io Client</p>
+                </div>
+                <div class="feature-box">
+                    <h3>Backend</h3>
+                    <p>Node.js + Express</p>
+                    <p>Socket.io Server</p>
+                    <p>Room Management</p>
+                </div>
+            </div>
+            <p style="margin-top: 30px; font-size: 1.3rem;">
+                <span class="highlight">No frameworks, no build tools</span> - Pure, fast, efficient!
+            </p>
+        </div>
+
+        <!-- Slide 10: Getting Started -->
+        <div class="slide">
+            <h2>Getting Started</h2>
+            <div class="code-block">
+                # Install dependencies<br>
+                npm install<br><br>
+                # Start multiplayer server<br>
+                npm start<br><br>
+                # Play at:<br>
+                http://localhost:3000
+            </div>
+            <p style="margin-top: 30px;">Share your room code with friends and <span class="highlight">start battling!</span></p>
+        </div>
+
+        <!-- Slide 11: Call to Action -->
+        <div class="slide">
+            <h1>Ready to Battle?</h1>
+            <p class="subtitle">Choose your story points wisely...</p>
+            <ul style="margin-top: 50px;">
+                <li>⚔️ Form your team with friends</li>
+                <li>🎯 Master directional combat or speed clicking</li>
+                <li>🐴 Race horses or battle knights</li>
+                <li>🏆 Dominate the arena together</li>
+            </ul>
+            <p style="margin-top: 50px; font-size: 2rem;">
+                <span class="highlight">Story Point Arena</span> - Where estimation meets elimination
+            </p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        <button id="nextBtn" onclick="changeSlide(1)">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        // Auto-play on load (optional)
+        // setTimeout(() => changeSlide(1), 3000);
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+
+            document.getElementById('currentSlide').textContent = currentSlide + 1;
+
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>

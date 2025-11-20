@@ -44,6 +44,20 @@
                     <p id="shareInstruction" class="network-instruction" style="display:none;">Share this code with other players to join!</p>
                 </div>
 
+                <!-- AI Story Estimation Section (Host Only) -->
+                <div id="networkEstimationSection" class="network-estimation-section" style="display:none;">
+                    <h3>📝 AI Story Point Estimator (Host Only)</h3>
+                    <p class="helper-text">As the host, get AI recommendations for your task to share with the team!</p>
+                    <textarea id="networkTaskDescription" placeholder="Example: As a user, I want to be able to reset my password so that I can regain access to my account if I forget it..."></textarea>
+                    <button id="networkAnalyzeBtn" class="analyze-btn">🤖 Analyze with AI</button>
+                    <div id="networkAnalysisResults" class="analysis-results compact">
+                        <div class="waiting-message">
+                            <span class="ai-icon">🤖</span>
+                            <p>Enter a task description and click "Analyze with AI" to get story point recommendations!</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Room Actions (before joining a room) -->
                 <div id="roomSelection" class="room-selection">
                     <h3>Join or Create a Room</h3>
@@ -122,7 +136,7 @@
                     </div>
                 </div>
             </div>
-            <button id="proceedToSetupBtn" class="start-btn">Continue to Team Setup →</button>
+            <button id="proceedToSetupBtn" class="start-btn">Continue to Player Setup →</button>
         </div>
 
         <!-- Setup Screen -->
